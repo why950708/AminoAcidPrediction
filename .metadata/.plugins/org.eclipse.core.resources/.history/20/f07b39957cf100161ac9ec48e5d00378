@@ -1,0 +1,78 @@
+package lab2;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.stream.Stream;
+
+public class Lab2 {
+
+	public static void main() {
+
+	}
+
+	String[] stringArray = null;
+
+	public Protein[] fileParsing(String name) {
+
+		try (Stream<String> stream = Files.lines(Paths.get(name))) {
+			// Get the files in and make it into a String array line by line
+			stringArray = stream.toArray(size -> new String[size]);
+			// stream.forEach(System.out::println);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		Protein[] returnVal = new Protein[stringArray.length];
+		ArrayList<Integer> list = new ArrayList<Integer>();
+		int index = 0;
+		//Skip the first Few Lines
+		while(index < stringArray.length && (stringArray[index].startsWith("#")||stringArray[index].length()==0))
+		{
+				index++;
+		}
+
+		while(index < stringArray.length)
+		{
+			if(stringArray[index].contains("<>")||stringArray[index].contains("end"))
+		}
+		
+		
+		
+		return returnVal;
+	}
+	
+	
+	
+}
+
+class Protein {
+
+ArrayList<String> pairs;
+
+public Protein(String[] pairsIn)
+{	
+	this.pairs = new ArrayList<String>(Arrays.asList(pairsIn));
+	for(int i=0;i<8;i++)
+	{
+		this.pairs.add("Z");
+	}
+}
+
+public String getNext(int pos)
+{
+	return pairs.get(pos);
+}
+
+public int length()
+{
+	return pairs.size();
+}
+
+
+
+}
+
+
