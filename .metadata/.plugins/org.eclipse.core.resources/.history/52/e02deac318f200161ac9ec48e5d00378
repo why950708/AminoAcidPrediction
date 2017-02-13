@@ -13,15 +13,13 @@ public class Lab2 {
 	ArrayList<Protein> tune;
 	ArrayList<Protein> test;
 	ArrayList<Layer> Layers;
-	Network network;
-	
-	HashMap<Character, double[]> IOPair;
+	HashMap<Character, int[]> IOPair;
 
 	public Lab2(String name) {
 		this.train = fileParsing(name);
 		this.tune = seperateTune(train);
 		this.test = seperateTest(train);
-		this.IOPair = new HashMap<Character, double[]>();
+		this.IOPair = new HashMap<Character, int[]>();
 		initilizeIOpair();
 		ArrayList<Layer> Layers = new ArrayList<Layer>();
 		createTheNetWork();
@@ -34,7 +32,7 @@ public class Lab2 {
 		for (Protein protein : this.train) {
 			for (String str : protein.getPairs()) {
 				if (!IOPair.containsKey(str.charAt(0))) {
-					double[] arr = new double[21];
+					int[] arr = new int[21];
 					arr[IOPair.size()] = 1;
 					IOPair.put(str.charAt(0), arr);
 					if (IOPair.size() == 21)
@@ -158,17 +156,15 @@ public class Lab2 {
 		
 		char Label = cur17[9].charAt(2);
 		
-		double[][] inputArr = new double[17][21];
+		double[][] inputArr = new int[17][21];
 		for(int i=0;i<17;i++)
 		{
 			char value = cur17[i].charAt(0);
 			inputArr[i]=  valueTransfer(value);
 		}
-		
+
 		//Forward pass
-		double[] inputLayer2 = Layers.get(1).calcOutput(inputArr);
-		
-		double[] inputHidden = Layers.get(2).calcOutput(inputLayer2);
+		Layers.get(1).calcOutput(inputArr);
 	}
 
 	// TODO
@@ -184,8 +180,8 @@ public class Lab2 {
 	}
 
 	// Transfer label value to input values
-	private double[] valueTransfer(char label) {
-		double[] returnVal = IOPair.get(label);
+	private int[] valueTransfer(char label) {
+		int[] returnVal = IOPair.get(label);
 		return returnVal;
 	}
 
@@ -344,8 +340,4 @@ class Layer {
 
 	}
 
-}
-
-class Network{
-	
 }

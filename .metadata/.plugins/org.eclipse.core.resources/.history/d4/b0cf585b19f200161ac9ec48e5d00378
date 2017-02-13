@@ -13,8 +13,6 @@ public class Lab2 {
 	ArrayList<Protein> tune;
 	ArrayList<Protein> test;
 	ArrayList<Layer> Layers;
-	Network network;
-	
 	HashMap<Character, double[]> IOPair;
 
 	public Lab2(String name) {
@@ -164,11 +162,9 @@ public class Lab2 {
 			char value = cur17[i].charAt(0);
 			inputArr[i]=  valueTransfer(value);
 		}
-		
+		d
 		//Forward pass
-		double[] inputLayer2 = Layers.get(1).calcOutput(inputArr);
-		
-		double[] inputHidden = Layers.get(2).calcOutput(inputLayer2);
+		Layers.get(1).calcOutput(inputArr);
 	}
 
 	// TODO
@@ -344,8 +340,4 @@ class Layer {
 
 	}
 
-}
-
-class Network{
-	
 }

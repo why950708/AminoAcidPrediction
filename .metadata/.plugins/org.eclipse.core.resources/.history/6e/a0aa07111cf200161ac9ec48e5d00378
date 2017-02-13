@@ -345,7 +345,3 @@ class Layer {
 	}
 
 }
-
-class Network{
-	
-}

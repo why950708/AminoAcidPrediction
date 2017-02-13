@@ -13,7 +13,7 @@ public class Lab2 {
 	ArrayList<Protein> tune;
 	ArrayList<Protein> test;
 	ArrayList<Layer> Layers;
-	Network network;
+	Network
 	
 	HashMap<Character, double[]> IOPair;
 
@@ -344,8 +344,4 @@ class Layer {
 
 	}
 
-}
-
-class Network{
-	
 }
