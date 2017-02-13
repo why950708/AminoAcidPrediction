@@ -1,0 +1,149 @@
+package lab2;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.stream.Stream;
+
+public class Lab2 {
+	ArrayList<Protein> train;
+	ArrayList<Protein> tune;
+	ArrayList<Protein> test;
+	public Lab2(String name)
+	{
+		this.train = fileParsing(name);
+		this.tune = seperateTune(train);
+		this.test = seperateTest(train);
+		current17 = new ArrayList<Protein>();
+		
+		
+	}
+	public static void main(String args[]) {
+		Lab2 lab2 = new Lab2(args[0]);
+	}
+
+	/**
+	 * @param name
+	 * @return an Arraylist of protein type in the file
+	 */
+	
+	public ArrayList<Protein> fileParsing(String name) {
+
+		String[] stringArray = null;
+		try (Stream<String> stream = Files.lines(Paths.get(name))) {
+			// Get the files in and make it into a String array line by line
+			stringArray = stream.toArray(size -> new String[size]);
+			// stream.forEach(System.out::println);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		// Return Val
+		ArrayList<Protein> returnVal = new ArrayList<Protein>();
+		// Saves the start and end position for each protein strain
+		ArrayList<Integer> list = new ArrayList<Integer>();
+		int index = 0;
+		// Skip the first Few Lines
+		while (index < stringArray.length && (stringArray[index].startsWith("#") || stringArray[index].length() == 0)) {
+			index++;
+		}
+
+		// The first protein start
+		
+		index++;
+		list.add(index);
+		while (index < stringArray.length) {
+			if (stringArray[index].contains("<>")) {
+
+				if (stringArray[index - 1].contains("end"))
+					list.add(index - 2);
+				else
+					list.add(index - 1);
+
+				list.add(index + 1);
+			}
+
+			index++;
+		}
+		index--;
+		while (stringArray[index].contains("end")) {
+			index--;
+		}
+		index-=2;
+		
+		list.add(index);
+//		for (Integer e : list) {
+//			System.out.println(e);
+//		}
+
+		// For each num pair
+		for (int i = 0; i < list.size() / 2; i++) {
+			int start = list.get(2 * i);
+			int end = list.get(2 * i + 1);
+			// Create new protein
+			returnVal.add(new Protein(Arrays.copyOfRange(stringArray, start , end + 1)));
+		}
+
+		return returnVal;
+	}
+
+	public ArrayList<Protein> seperateTest(ArrayList<Protein> data) {
+		ArrayList<Protein> returnVal = new ArrayList<Protein>();
+		if (data == null || data.size() == 0) {
+			return returnVal;
+		}
+		//Every fifth after every fifth is taken out
+		for (int i = 4; i < data.size(); i = i + 3) {
+			returnVal.add(data.remove(i));
+		}
+		return returnVal;
+	}
+
+	public ArrayList<Protein> seperateTune(ArrayList<Protein> data) {
+		ArrayList<Protein> returnVal = new ArrayList<Protein>();
+		//Every fifth
+		if (data == null || data.size() == 0) {
+			return returnVal;
+		}
+		for (int i = 4; i < data.size(); i = i + 4) {
+			returnVal.add(data.remove(i));
+		}
+		return returnVal;
+
+	}
+
+	public ArrayList<Protein> get17()
+	{
+		
+	}
+}
+
+class Protein {
+
+	ArrayList<String> pairs;
+
+	public Protein(String[] pairsIn) {
+		this.pairs = new ArrayList<String>(Arrays.asList(pairsIn));
+		for (int i = 0; i < 8; i++) {
+			this.pairs.add("Z");
+		}
+	}
+
+	public String getNext(int pos) {
+		if(pos>=pairs.size())
+			return null;
+		return pairs.get(pos);
+	}
+
+	public int length() {
+		return pairs.size();
+	}
+
+	@Override
+	public String toString() {
+		return "Protein [pairs=" + pairs + "]";
+	}
+
+}
