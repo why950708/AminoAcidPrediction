@@ -280,8 +280,8 @@ class Perceptron {
 
 	//TODO
 	// Using the info from the previous layer to calculate the change of weights
-	public void train(double[] otherFactors) {
-		double[] changeOfWeights;
+	public void train(double otherFactor) {
+		double changeOfWeights;
 	}
 
 	// TODO
@@ -315,27 +315,15 @@ class Layer {
 	}
 
 	// TODO
-	//Calculate the output for the whole layer
 	public double[] calcOutput(double[][] input) {
 		double[] returnVal = new double[perceptrons.size()];
 		for(int i=0;i<perceptrons.size();i++)
 		{
-			returnVal[i] = perceptrons.get(i).getOutput(input[i]);
+			returnVal.[i] = perceptrons.get(i).getOutput(input[i]);
 		}
 		return returnVal;
 	}
-	//TODO
-	//Calculate the output for the whole previous layer
-	public double[] getBackProp()
-	{
-		double[] returnVal = new double[perceptrons.size()];
-		for(int i=0;i<perceptrons.size();i++)
-		{
-			returnVal[i] = perceptrons.get(i).getBackProp()
-		}
-		return returnVal;
 
-	}
 	// TODO
 	public void train(double[] otherFactors) {
 

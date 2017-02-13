@@ -280,8 +280,8 @@ class Perceptron {
 
 	//TODO
 	// Using the info from the previous layer to calculate the change of weights
-	public void train(double[] otherFactors) {
-		double[] changeOfWeights;
+	public void train(double[] otherFactor) {
+		double changeOfWeights;
 	}
 
 	// TODO

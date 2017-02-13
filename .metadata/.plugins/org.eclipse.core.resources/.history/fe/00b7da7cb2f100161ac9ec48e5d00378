@@ -237,14 +237,13 @@ class Perceptron {
 	double sum;
 
 	// TODO
-	public Perceptron(String type, int inputSize) {
-		weights = new double[inputSize];
+	public Perceptron(String type) {
 		this.type = type;
 		if (this.isType("IN1")) {
-	
+			weights = new double[1];
 			weights[0] = 1;
 		} else
-			
+			weights = double
 			for(int i = 0; i<weights.length;i++)
 			weights[i] = Math.random();
 	}
@@ -280,16 +279,16 @@ class Perceptron {
 
 	//TODO
 	// Using the info from the previous layer to calculate the change of weights
-	public void train(double[] otherFactors) {
-		double[] changeOfWeights;
+	public void train(double otherFactor) {
+		double changeOfWeights;
 	}
 
 	// TODO
 	//Get the otherFactors for the previous layer
 	public double getBackProp() {
-		return 0.0;
+
 	}
-	
+
 	private double sigmoid(double x) {
 		return (1 / (1 + Math.pow(Math.E, (-1 * x))));
 	}
@@ -306,36 +305,16 @@ class Layer {
 	String type;
 
 	// TODO
-	public Layer(String type,int numOfNodes,int[] inputNumArray) {
+	public Layer(String type) {
 		this.type = type;
-		for(int i=0;i<numOfNodes;i++)
-		{
-			perceptrons.add(new Perceptron(type, inputNumArray[i]));
-		}
 	}
 
 	// TODO
-	//Calculate the output for the whole layer
-	public double[] calcOutput(double[][] input) {
+	public double[] calcOutput(double[] input) {
 		double[] returnVal = new double[perceptrons.size()];
-		for(int i=0;i<perceptrons.size();i++)
-		{
-			returnVal[i] = perceptrons.get(i).getOutput(input[i]);
-		}
 		return returnVal;
 	}
-	//TODO
-	//Calculate the output for the whole previous layer
-	public double[] getBackProp()
-	{
-		double[] returnVal = new double[perceptrons.size()];
-		for(int i=0;i<perceptrons.size();i++)
-		{
-			returnVal[i] = perceptrons.get(i).getBackProp()
-		}
-		return returnVal;
 
-	}
 	// TODO
 	public void train(double[] otherFactors) {
 
