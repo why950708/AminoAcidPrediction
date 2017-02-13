@@ -21,7 +21,8 @@ public class Lab2 {
 		this.test = seperateTest(train);
 		this.IOPair = new HashMap<Character, int[]>();
 		initilizeIOpair();
-		initilizeWeight();
+		ArrayList<Layer> Layers = new ArrayList<Layer>();
+		createTheNetWork();
 
 	}
 
@@ -136,14 +137,14 @@ public class Lab2 {
 
 	}
 
-	//Train the network
+	// Train the network
 	public void train() {
 		for (Protein element : this.train)
 			trainWithOneProtein(element);
 	}
 
-	//TODO
-	//Where the sliding window is implemented
+	// TODO
+	// Where the sliding window is implemented
 	private void trainWithOneProtein(Protein element) {
 		//Get all the current input
 		String[] cur17 = new String[17];
@@ -168,25 +169,15 @@ public class Lab2 {
 	}
 
 	// TODO
-	private void initilizeWeight() {
-		// TODO Auto-generated method stub
-		//Create the network
-		this.perceptrons = new ArrayList<Perceptron>();
-		
-		createTheNetwork()
-	
-	}
-
-	// TODO
-	private createTheNetwork(){
-		//Input Layer 1
-		ArrayList<>
-		//Input Layer 2
-		
-		//Hidden Layer
-		
-		//Output Layer
-		
+	private void createTheNetWork() {
+		// Input Layer 1
+		this.Layers.add(new Layer("IN1"));
+		// Input Layer 2
+		this.Layers.add(new Layer("IN2"));
+		// Hidden Layer
+		this.Layers.add(new Layer("HID"));
+		// Output Layer
+		this.Layers.add(new Layer("OUT"));
 	}
 
 	// Transfer label value to input values
@@ -241,34 +232,72 @@ class Protein {
 
 class Perceptron {
 	String type;
-	double weight;
+	double[] weights;
+	double output;
+	double sum;
 
 	// TODO
 	public Perceptron(String type) {
-		if (perceptrons.isType("IN1")) {
-		}
-		if (perceptrons.isType("IN2")) {
-		}
-		if (perceptrons.isType("HID")) {
-		}
-		if (perceptrons.isType("OUT")) {
-		}
+		this.type = type;
+		if (this.isType("IN1")) {
+			weights = new double[1];
+			weights[0] = 1;
+		} else
+			weights = double
+			for(int i = 0; i<weights.length;i++)
+			weights[i] = Math.random();
 	}
 
-	// TODO
+	// Check the type of the perceptron
 	public boolean isType(String type) {
+		return this.type.equals(type);
 	}
 
-	// TODO
-	public double getOutput(double input) {
+	// Calculate the sum and get the output for each node
+	public double getOutput(double[] inputs) {
+		// Get Sum first
+		double cache = 0;
+		for (int i = 0; i < inputs.length; i++) {
+			cache += inputs[i] * weights[i];
+		}
+		this.sum = cache;
+		// Output to the next node according to the type
+		if (this.isType("HID")) {
+			// Sigmoid
+			return sigmoid(sum);
+		}
+		if (this.isType("OUT")) {
+			// RELU
+			return relu(sum);
+		}
+		if (this.isType("IN2")) {
+			return sum;
+		}
+		return inputs[0];
+
 	}
 
-	// TODO
+	//TODO
+	// Using the info from the previous layer to calculate the change of weights
 	public void train(double otherFactor) {
 		double changeOfWeights;
 	}
 
-	
+	// TODO
+	//Get the otherFactors for the previous layer
+	public double getBackProp() {
+
+	}
+
+	private double sigmoid(double x) {
+		return (1 / (1 + Math.pow(Math.E, (-1 * x))));
+	}
+
+	private double relu(double x) {
+		if (x < 0)
+			return 0;
+		return x;
+	}
 }
 
 class Layer {
