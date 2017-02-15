@@ -91,6 +91,7 @@ public class Lab2 {
                         "in the current strain, so make the batchNum as " +
                         " the size of total number of movings for the input window, which the maximum number of " +
                         "batchNum for each strain (protein sequence) can take ");
+                batchNum = real_batchNum;
             }
        //     if(raw_inputs.isEmpty()) System.out.println("raw_inputs empty");
             List<List<dfvec>> batch = new ArrayList<>();
@@ -112,9 +113,15 @@ public class Lab2 {
         // test accuracy
         int correct = 0 ;
 
+        int start = 0, end = windowSize - 1;
         for(Strian s : test){
-            List<dfvec> test_inputs = convertToOneHotFvec(s);
-            Calculate_Output(test_inputs);
+            List<dfvec>  raw_inputs = convertToOneHotFvec(s);
+           // List<dfvec> test_inputs = convertToOneHotFvec(s);
+            // List<List<dfvec>> batch = new ArrayList<>();
+            List<dfvec> sample = raw_inputs.subList(start, end + 1);
+            char label = raw_inputs.get((start + end + 2)/2).label;
+            // batch.add(sample);
+            Calculate_Output(sample);
             int maxidx = 0;
             double max = 0;
             for (netPerceptron p : output_layer) {
@@ -137,11 +144,23 @@ public class Lab2 {
                 System.exit(11);
             }
 
-            if (output == )
+            if (output == label){
+                correct++;
+            }
+            else{
+                System.out.println("output: " + output + "label: " + label);
+            }
+
+
+            start++;
+            end++;
+            }
+
+
             clear_input_output_delta();
+        System.out.println("test_accuracy: " + correct*1.0/test.size());
         }
 
-    }
 
     private static void clear_input_output_delta() {
         // clear input and output and delta for each perceptron
@@ -257,6 +276,7 @@ public class Lab2 {
 
     private static void Calculate_Output(List<dfvec> sample) {
         double [] output = new double[OUTPUT_LAYER_NUM];
+        System.out.println("sample size: " + sample.size() + "input_layer: " + input_layer.size());
         // input layer
         for(dfvec featureVec : sample){
             int i = sample.indexOf(featureVec);
@@ -298,10 +318,6 @@ public class Lab2 {
         for (pair p : sample.ps) {
             char acid_c = p.acid.charAt(0);
 
-              /*  if (acid_c > 'U') {
-                    System.out.println(acid_c);
-                    System.exit(6);
-                }*/
             dfvec curFeatureVector = new dfvec(acid_c, acidNum, p.label);
             dfvecs.add(curFeatureVector);
         }
