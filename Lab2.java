@@ -1,6 +1,4 @@
 import java.io.IOException;
-import java.lang.reflect.Array;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
@@ -22,6 +20,7 @@ public class Lab2 {
     static List<netPerceptron> input_layer;
     static List<netPerceptron> hidden_layer;
     static List<netPerceptron> output_layer;
+    static double alpha = 0.01;
     public static void main(String[] args) throws IOException {
         String train_FileName = args[0];
         //String tune_FileName = args[1];
@@ -35,23 +34,20 @@ public class Lab2 {
             if(i % 5 ==0) {
                 tune.add(train.get(i));
                 removeList.add(train.get(i));
-                test.add(train.get(i + 1));
-                removeList.add(train.get(i));
+                if(i + 1 < train.size()){
+                    test.add(train.get(i + 1));
+                    removeList.add(train.get(i + 1));
+                }
             }
         }
+
         // remove overlaps
         for (Strian strian : removeList) {
             train.remove(strian);
         }
 
-
-        // List<Strian> tune = ParseFile(tune_FileName);
-        //TODO
-        // List<dfvec>  raw_inputs = new ArrayList<>();
-
         // build network
         // forward
-        // raw_input layer
          input_layer  = new ArrayList<netPerceptron>();
         for (int i = 0 ; i < INPUT_LAYER_NUM ; i ++){
             netPerceptron p = new netPerceptron(1,null,input_type_Nums);
@@ -84,6 +80,7 @@ public class Lab2 {
             perceptron.nextLayer = output_layer;
         }
 
+        // train
         for (Strian strian : train) {
             List<dfvec>  raw_inputs = convertToOneHotFvec(strian);
             int max_batchNum = raw_inputs.size() - (windowSize - 1);
@@ -110,9 +107,59 @@ public class Lab2 {
                 start++;
                 end++;
             }
-
         }
 
+        // test accuracy
+        int correct = 0 ;
+
+        for(Strian s : test){
+            List<dfvec> test_inputs = convertToOneHotFvec(s);
+            Calculate_Output(test_inputs);
+            int maxidx = 0;
+            double max = 0;
+            for (netPerceptron p : output_layer) {
+                if(p.output > max){
+                    maxidx = output_layer.indexOf(p);
+                    max = p.output;
+                }
+            }
+            char output = ' ';
+            if(maxidx == 0){
+                output = '_';
+            }
+            else if(maxidx == 1){
+                output = 'e';
+            }
+            else if (maxidx == 2){
+                output = 'h';
+            }
+            else{
+                System.exit(11);
+            }
+
+            if (output == )
+            clear_input_output_delta();
+        }
+
+    }
+
+    private static void clear_input_output_delta() {
+        // clear input and output and delta for each perceptron
+        for (netPerceptron p : input_layer) {
+            p.output = 0;
+            p.netinput = 0;
+            p.delta = 0;
+        }
+        for (netPerceptron p : hidden_layer) {
+            p.output = 0;
+            p.netinput = 0;
+            p.delta = 0;
+        }
+        for (netPerceptron p : output_layer) {
+            p.output = 0;
+            p.netinput = 0;
+            p.delta = 0;
+        }
     }
 
     private static void update(List<List<dfvec>> samples) {
@@ -125,65 +172,116 @@ public class Lab2 {
             }
             System.out.println("------------------------------");
         }*/
+        if(samples == null || samples.size() == 0 ){
+            System.out.println("empty samples list");
+            System.exit(10);
+        }
         List<Character> labels  = Arrays.asList('_','e','h');
+
+        List<dfvec> input_avg = new ArrayList<>(samples.get(0));
+
         // forward
         double[] errs  = new double[OUTPUT_LAYER_NUM];
         for (List<dfvec> sample : samples) {
-           // input layer
-            for(dfvec featureVec : sample){
-                int i = sample.indexOf(featureVec);
-                netPerceptron p = input_layer.get(i);
-                p.CalculateWeightedSum(featureVec.features);
-                // input layer: output = input
-                p.output = p.netinput;
-            }
-
-            // hidden layer
-            for (netPerceptron hp : hidden_layer) {
-                for (netPerceptron child : hp.prevLayer) {
-                  hp.netinput += child.output*hp.weights[hp.prevLayer.indexOf(child)];
+            if(samples.indexOf(sample) != 0){
+                for (dfvec f : input_avg) {
+                    f.add(sample.get(input_avg.indexOf(f)));
                 }
-                hp.output = hp.ReLU(hp.netinput);
             }
-
-            //output
-            for (netPerceptron op : output_layer) {
-                for (netPerceptron child : hidden_layer) {
-                    op.netinput += child.output*op.weights[hidden_layer.indexOf(child)];
-                }
-                op.output = op.sigmoid(op.netinput);
-            }
-
+             Calculate_Output(sample);
             // calculate and update the errs
+            // get the label: teacher vector
             double[] teacher = new double[OUTPUT_LAYER_NUM];
             teacher[labels.indexOf(sample.get((windowSize + 1)/2).label)] = 1.0;
+
             for (int i = 0; i < errs.length; i++) {
                 netPerceptron p = output_layer.get(i);
                  errs[i] += teacher[i] - p.output;
             }
         }
-
-        for (int i = 0; i < errs.length; i++) {
+        // average the sum to get the avg input (for batch update)
+        for (dfvec f : input_avg) {
+            for (int i = 0; i < f.features.length; i++) {
+                f.features[i]/=(samples.size());
+            }
+        }
+        //System.out.println(input_avg);
+       /* for (int i = 0; i < errs.length; i++) {
             System.out.print(errs[i] + " ");
-        }
-        // backprop
+        }*/
 
-
-        // clear input and output
-        for (netPerceptron p : input_layer) {
-            p.output = 0;
-            p.netinput = 0;
-        }
-        for (netPerceptron p : hidden_layer) {
-            p.output = 0;
-            p.netinput = 0;
-        }
-        for (netPerceptron p : output_layer) {
-            p.output = 0;
-            p.netinput = 0;
+        // backprop delta
+        for (netPerceptron op : output_layer) {
+            op.delta = op.sigmoidP(op.netinput);
+            // update next layer delta
+            for (int i = 0; i < op.weights.length - 1; i++) {
+                netPerceptron child = op.prevLayer.get(i);
+                child.delta += child.ReLUP(child.netinput)*op.weights[i] * op.delta;
+            // update output layer weights
+                op.weights[i] += alpha * op.delta * child.output;
+            }
+            // bias
+            op.weights[op.weights.length - 1] += alpha*op.delta*(-1);
         }
 
-        System.out.println();
+        for (netPerceptron hp : hidden_layer) {
+            /*double weightedSum = 0;
+            int index = hidden_layer.indexOf(hp);
+            for (netPerceptron np : output_layer) {
+
+            }*/
+           /* hp.delta = hp.delta*hp.ReLUP(hp.netinput);*/
+
+            for (int i = 0; i < hp.weights.length - 1; i ++) {
+                netPerceptron chlid = hp.prevLayer.get(i);
+                chlid.delta += hp.weights[i]*hp.delta;
+                // update weights
+                hp.weights[i] += alpha * hp.delta* chlid.output;
+            }
+
+            // bias
+            hp.weights[hp.weights.length - 1] += alpha*hp.delta*(-1);
+        }
+        for (netPerceptron ip : input_layer) {
+            int index = input_layer.indexOf(ip);
+            dfvec input = input_avg.get(index);
+            for (int i = 0; i < ip.weights.length; i++) {
+                ip.weights[i] += alpha * ip.delta * input.features[i];
+            }
+        }
+
+
+       clear_input_output_delta();
+
+    }
+
+    private static void Calculate_Output(List<dfvec> sample) {
+        double [] output = new double[OUTPUT_LAYER_NUM];
+        // input layer
+        for(dfvec featureVec : sample){
+            int i = sample.indexOf(featureVec);
+            netPerceptron p = input_layer.get(i);
+            p.CalculateWeightedSum(featureVec.features);
+            // input layer: output = input
+            p.output = p.netinput;
+        }
+
+        // hidden layer
+        for (netPerceptron hp : hidden_layer) {
+            for (netPerceptron child : hp.prevLayer) {
+                hp.netinput += child.output*hp.weights[hp.prevLayer.indexOf(child)];
+            }
+            hp.output = hp.ReLU(hp.netinput);
+        }
+
+        //output
+        for (netPerceptron op : output_layer) {
+            for (netPerceptron child : hidden_layer) {
+                op.netinput += child.output*op.weights[hidden_layer.indexOf(child)];
+            }
+            op.output = op.sigmoid(op.netinput);
+        }
+
     }
 
     private static  List<dfvec>  convertToOneHotFvec(Strian sample) {
@@ -358,7 +456,6 @@ class dfvec{
             dic.put(input,index);
             index++;
         }
-
         indexOfOne = dic.get(input);
         features = new double[flen];
         features[indexOfOne] = 1.0;
@@ -369,6 +466,12 @@ class dfvec{
             System.exit(8);
         }
         this.label = label.charAt(0);
+    }
+    public dfvec add(dfvec other){
+        for (int i = 0; i < features.length; i++) {
+             features[i] += other.features[i];
+        }
+        return  this;
     }
 
     @Override
