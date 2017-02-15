@@ -13,7 +13,15 @@ public class Lab2 {
     static int batchNum = 1;
     static int acidNum = 21;
     static int padNum = 8;
-
+    static int windowSize = 2*padNum + 1;
+   // static final int RAW_INPUT_LAYER_NUM = windowSize;
+    static final int input_type_Nums = 21;
+    static final int INPUT_LAYER_NUM = windowSize;
+    static final int HIDDEN_LAYER_NUM = 7;
+    static final int OUTPUT_LAYER_NUM = 3;
+    static List<netPerceptron> input_layer;
+    static List<netPerceptron> hidden_layer;
+    static List<netPerceptron> output_layer;
     public static void main(String[] args) throws IOException {
         String train_FileName = args[0];
         //String tune_FileName = args[1];
@@ -40,60 +48,163 @@ public class Lab2 {
         // List<Strian> tune = ParseFile(tune_FileName);
         //TODO
         // List<dfvec>  raw_inputs = new ArrayList<>();
+
+        // build network
+        // forward
+        // raw_input layer
+         input_layer  = new ArrayList<netPerceptron>();
+        for (int i = 0 ; i < INPUT_LAYER_NUM ; i ++){
+            netPerceptron p = new netPerceptron(1,null,input_type_Nums);
+            input_layer.add(p);
+        }
+
+        hidden_layer  = new ArrayList<netPerceptron>();
+        for(int i = 0 ; i < HIDDEN_LAYER_NUM; i ++){
+            netPerceptron p = new netPerceptron(2,input_layer,null);
+            hidden_layer.add(p);
+        }
+
+        for (netPerceptron perceptron : input_layer) {
+            perceptron.nextLayer = hidden_layer;
+        }
+        for (netPerceptron perceptron : hidden_layer) {
+            perceptron.prevLayer = input_layer;
+        }
+
+         output_layer  = new ArrayList<netPerceptron>();
+        for (int i = 0; i < OUTPUT_LAYER_NUM; i++) {
+            netPerceptron p = new netPerceptron(3,hidden_layer);
+            output_layer.add(p);
+        }
+
+        for (netPerceptron perceptron : output_layer) {
+            perceptron.prevLayer = hidden_layer;
+        }
+        for (netPerceptron perceptron: hidden_layer){
+            perceptron.nextLayer = output_layer;
+        }
+
         for (Strian strian : train) {
             List<dfvec>  raw_inputs = convertToOneHotFvec(strian);
+            int max_batchNum = raw_inputs.size() - (windowSize - 1);
+            int real_batchNum = Math.min(batchNum,max_batchNum);
 
+            if(real_batchNum < batchNum ){
+                System.out.println("batchNum greater than maximum possible number of updates in " +
+                        "in the current strain, so make the batchNum as " +
+                        " the size of total number of movings for the input window, which the maximum number of " +
+                        "batchNum for each strain (protein sequence) can take ");
+            }
        //     if(raw_inputs.isEmpty()) System.out.println("raw_inputs empty");
-            int count = 0;
-            while(count + batchNum < raw_inputs.size()){
+            List<List<dfvec>> batch = new ArrayList<>();
+            int start = 0, end = windowSize - 1;
 
-                List<dfvec> batch  = raw_inputs.subList(count, count + batchNum);
+            while(end < raw_inputs.size()){
+                if(start % real_batchNum == 0 && start != 0){
                 update(batch);
+                batch.clear();
+                }
 
-                count += batchNum;
+                List<dfvec> sample = raw_inputs.subList(start, end + 1);
+                batch.add(sample);
+                start++;
+                end++;
             }
-            if(batchNum > raw_inputs.size()){
-                /* List<dfvec>batch  = raw_inputs.subList(count, raw_inputs.size() - 1);
-                update(batch);
-                count = 0;
-                raw_inputs.clear();
-                raw_inputs.addAll(convertToOneHotFvec(strian));*/
-                System.out.println("batchNum greater than input sizes, so make the full list as a batch");
-                break;
-            }
-            List<dfvec> rest = raw_inputs.subList(count, raw_inputs.size());
-            // if(rest.isEmpty()) System.out.println("rest empty: count: " + count + "raw_input_size" + raw_inputs.size());
-            update(rest);
+
         }
 
     }
 
-    private static void update(List<dfvec> raw_inputs) {
+    private static void update(List<List<dfvec>> samples) {
         //TODO
        /*     System.out.println(raw_inputs);
         System.out.println("--------------");*/
+        /*for (List<dfvec> sample : samples) {
+            for (dfvec dfvec : sample) {
+                System.out.println(dfvec);
+            }
+            System.out.println("------------------------------");
+        }*/
+        List<Character> labels  = Arrays.asList('_','e','h');
+        // forward
+        double[] errs  = new double[OUTPUT_LAYER_NUM];
+        for (List<dfvec> sample : samples) {
+           // input layer
+            for(dfvec featureVec : sample){
+                int i = sample.indexOf(featureVec);
+                netPerceptron p = input_layer.get(i);
+                p.CalculateWeightedSum(featureVec.features);
+                // input layer: output = input
+                p.output = p.netinput;
+            }
+
+            // hidden layer
+            for (netPerceptron hp : hidden_layer) {
+                for (netPerceptron child : hp.prevLayer) {
+                  hp.netinput += child.output*hp.weights[hp.prevLayer.indexOf(child)];
+                }
+                hp.output = hp.ReLU(hp.netinput);
+            }
+
+            //output
+            for (netPerceptron op : output_layer) {
+                for (netPerceptron child : hidden_layer) {
+                    op.netinput += child.output*op.weights[hidden_layer.indexOf(child)];
+                }
+                op.output = op.sigmoid(op.netinput);
+            }
+
+            // calculate and update the errs
+            double[] teacher = new double[OUTPUT_LAYER_NUM];
+            teacher[labels.indexOf(sample.get((windowSize + 1)/2).label)] = 1.0;
+            for (int i = 0; i < errs.length; i++) {
+                netPerceptron p = output_layer.get(i);
+                 errs[i] += teacher[i] - p.output;
+            }
+        }
+
+        for (int i = 0; i < errs.length; i++) {
+            System.out.print(errs[i] + " ");
+        }
+        // backprop
 
 
+        // clear input and output
+        for (netPerceptron p : input_layer) {
+            p.output = 0;
+            p.netinput = 0;
+        }
+        for (netPerceptron p : hidden_layer) {
+            p.output = 0;
+            p.netinput = 0;
+        }
+        for (netPerceptron p : output_layer) {
+            p.output = 0;
+            p.netinput = 0;
+        }
+
+        System.out.println();
     }
 
-    private static  List<dfvec> convertToOneHotFvec(Strian sample) {
+    private static  List<dfvec>  convertToOneHotFvec(Strian sample) {
         List<dfvec> dfvecs = new ArrayList<dfvec>();
         //List<dfvec> updateset  = new ArrayList<dfvec>();
 
         //pad first padNum: 8
 
-        dfvec solvent = new dfvec('0', 21);
+        dfvec solvent = new dfvec('0', 21, "S");
         for(int i  = 0 ; i < padNum; i++){
             dfvecs.add(solvent);
         }
-
+             char label = ' ';
         for (pair p : sample.ps) {
             char acid_c = p.acid.charAt(0);
+
               /*  if (acid_c > 'U') {
                     System.out.println(acid_c);
                     System.exit(6);
                 }*/
-            dfvec curFeatureVector = new dfvec(acid_c, acidNum);
+            dfvec curFeatureVector = new dfvec(acid_c, acidNum, p.label);
             dfvecs.add(curFeatureVector);
         }
 
@@ -101,6 +212,7 @@ public class Lab2 {
         for(int i  = 0 ; i < padNum; i++){
             dfvecs.add(solvent);
         }
+
         return dfvecs;
     }
 
@@ -237,8 +349,9 @@ class dfvec{
     static HashMap<Character, Integer> dic = new HashMap<>();
     static int index = 0;
     int flen;
-    int features[];
-    public dfvec(char input, int flen) {
+    double features[];
+    char label;
+    public dfvec(char input, int flen, String label) {
         //check if acid type exists
         int indexOfOne = 0 ;
         if(!dic.containsKey(input)){
@@ -247,9 +360,15 @@ class dfvec{
         }
 
         indexOfOne = dic.get(input);
-        features = new int[flen];
-        features[indexOfOne] = 1;
+        features = new double[flen];
+        features[indexOfOne] = 1.0;
         this.flen = flen;
+        label = label.trim();
+        if((label == null) || (label.length() != 1)){
+            System.out.println("string label not a single char: " + label);
+            System.exit(8);
+        }
+        this.label = label.charAt(0);
     }
 
     @Override
@@ -260,77 +379,89 @@ class dfvec{
                 '}';
     }
 }
+class data {
+    List<dfvec> input;
+    char label;
+
+    public data(List<dfvec> input, char label) {
+        this.input = input;
+        this.label = label;
+    }
+}
 
 class netPerceptron{
     static double alpha = 0.01;
     double [] weights;
     List<netPerceptron> nextLayer;
     List<netPerceptron> prevLayer;
-    int mode;
-
-    // mode 1: raw_input layer's perceptron constructor: without prevLayer
-    public netPerceptron(int mode, List<netPerceptron> nextLayer, dfvec input) {
-        this.mode = mode;
-        if(mode == 1){
+    int layerNum;
+    double netinput;
+    double output;
+    double delta;
+    // layerNum 1: raw_input layer's perceptron constructor: without prevLayer
+    public netPerceptron(int layerNum, List<netPerceptron> nextLayer, int input_Num) {
+        this.layerNum = layerNum;
+        if(layerNum == 1){
             this.nextLayer = nextLayer;
         }
         else{
-            System.out.println("mode number error, 1: raw_input 2: input 3: hidden(ReLu) 4: output(sigmoid)");
-            System.out.println("expected mode: 1, + actual mode" + mode);
+            System.out.println("layerNum number error, 1: input 2: hidden(ReLu) 3: output(sigmoid)");
+            System.out.println("expected layerNum: 1, + actual layerNum" + layerNum);
             System.exit(7);
         }
 
         // initialize weights
-
-        weights = new double[input.features.length + 1];
-        for (int i = 0; i < input.features.length; i++) {
-            weights[i] = input.features[i];
+        weights = new double[input_Num];
+        for (int i = 0; i < weights.length; i++) {
+            weights[i] = 1;
         }
 
         // generate random weight value for bias
-        Random r = new Random();
-        weights[input.features.length] = r.nextDouble();
+      /*  Random r = new Random();
+        weights[input.features.length] = r.nextDouble();*/
 
     }
 
-    // mode 4: output(sigmoid as activation function) layer's perception constructor: without nextLayer
-    public netPerceptron(int mode, List<netPerceptron> prevLayer) {
+    // layerNum 4: output(sigmoid as activation function) layer's perception constructor: without nextLayer
+    public netPerceptron(int layerNum, List<netPerceptron> prevLayer) {
         // generate using random Generators
-
-        if(mode == 4){
+        if(layerNum == 3){
             this.prevLayer = prevLayer;
         }
         else{
-            System.out.println("mode number error, 1: raw_input 2: input 3: hidden(ReLu) 4: output(sigmoid)");
-            System.out.println("expected mode: 4, + actual mode" + mode);
+            System.out.println("layerNum number error, 1：input 2: hidden(ReLu) 3: output(sigmoid)");
+            System.out.println("expected layerNum: 3, + actual layerNum" + layerNum);
             System.exit(7);
         }
 
-
         // initialize weights
-        int prevPerceptronNum = prevLayer.size();
-        weights = new double[prevPerceptronNum + 1];
-        Random rand = new Random();
+        Random r = new Random();
+        weights = new double[prevLayer.size() + 1];
         for (int i = 0; i < weights.length; i++) {
-            weights[i] = rand.nextDouble();
+            weights[i] = r.nextDouble();
         }
     }
 
-    public netPerceptron( int mode, List<netPerceptron> prevLayer, List<netPerceptron> nextLayer ) {
-        if((mode == 2) || (mode == 3)){
+    public netPerceptron(int layerNum, List<netPerceptron> prevLayer, List<netPerceptron> nextLayer) {
+        if((layerNum == 2) ){
             this.prevLayer = prevLayer;
             this.nextLayer = nextLayer;
         }
         else{
-            System.out.println("mode number error, 1: raw_input 2: input 3: hidden(ReLu) 4: output(sigmoid)");
-            System.out.println("expected mode: 2 or 3, + actual mode" + mode);
+            System.out.println("layerNum number error, 1：input 2: hidden(ReLu) 3: output(sigmoid)");
+            System.out.println("expected layerNum: 2, + actual layerNum" + layerNum);
             System.exit(7);
         }
 
-        this.mode = mode;
+        this.layerNum = layerNum;
+        // initialize weights : forward
+        Random r = new Random();
+        weights = new double[prevLayer.size() + 1];
+        for (int i = 0; i < weights.length; i++) {
+            weights[i] = r.nextDouble();
+        }
+
     }
-
-
 
     public void addnextLayers(List<netPerceptron> nextLayer){
         this.nextLayer = nextLayer;
@@ -340,8 +471,8 @@ class netPerceptron{
         this.prevLayer = prevLayer;
     }
 
-    public double CalculateWeightedSum(double[] input){
-        if(input.length != weights.length - 1){
+    public void CalculateWeightedSum(double[] input){
+        if(input.length != weights.length){
             System.out.println("input and weights size does not match");
             System.out.println("input: " + input.length + "weight: " + weights.length);
             System.exit(8);
@@ -352,13 +483,16 @@ class netPerceptron{
         }
 
         // bias weight
-        sum+= (-1)*weights[input.length];
-        return sum;
+       /* sum+= (-1)*weights[input.length ];*/
+        netinput = sum;
+
+        // return sum;
     }
 
-    public void updateweights (double[] input, double delta){
+    public void updateweights (double[] input, double[] delta){
 
         //TODO
+
     }
     public double sigmoid (double x){
         return 1/(1 + (Math.exp(-x)));
