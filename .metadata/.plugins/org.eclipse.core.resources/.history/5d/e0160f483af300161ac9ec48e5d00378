@@ -201,7 +201,7 @@ public class Lab2 {
 			
 		//Input layer 1
 		next = curr;
-		curr =  new Layer("IN1", 17, 21, next);
+		curr =  new Layer("IN1", 21, 1, next);
 		this.Layers.add(curr);
 
 		for(int i=1;i < Layers.size();i++)
@@ -281,7 +281,7 @@ class Perceptron {
 	// TODO
 	public Perceptron(String type, int numOfInputsEachNode) {
 		//Initialize the matrix for weights using the number of inputs
-		//System.out.println("numOfInputs "+numOfInputsEachNode);
+		System.out.println(numOfInputsEachNode);
 		weights = new double[numOfInputsEachNode];
 		//Set the type
 		this.type = type;
@@ -308,8 +308,8 @@ class Perceptron {
 		this.inputs = inputs;
 		// Get Sum first
 		double cache = 0;
-		//System.out.println(inputs.length);
-		//System.out.println("weights le ngth: "+weights.length);
+		System.out.println(inputs.length);
+		System.out.println("weights le ngth: "+weights.length);
 		for (int i = 0; i < inputs.length; i++) {
 			cache += inputs[i] * weights[i];
 		}
@@ -391,7 +391,7 @@ class Layer {
 		double[] returnVal = new double[perceptrons.size()];
 		for(int i=0;i<perceptrons.size();i++)
 		{
-			returnVal[i]  = perceptrons.get(i).getOutput(input[i]);
+			returnVal[i] = perceptrons.get(i).getOutput(input[i]);
 		}
 		output = returnVal;
 		//System.out.println(output);
@@ -422,9 +422,7 @@ class Layer {
 	public void forwardPass(double[][] input)
 	{
 		if(nextLayer == null) return;
-		System.out.println(nextLayer.getNumOfNodes());
 		double[][] inputToNextLayer = new double[nextLayer.getNumOfNodes()][numOfNodes];
-		
 		for(int i = 0; i<numOfNodes ; i++)
 		{
 			inputToNextLayer[i] = this.calcOutput(input);

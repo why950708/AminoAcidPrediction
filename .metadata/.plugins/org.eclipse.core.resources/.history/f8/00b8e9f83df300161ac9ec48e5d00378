@@ -201,7 +201,7 @@ public class Lab2 {
 			
 		//Input layer 1
 		next = curr;
-		curr =  new Layer("IN1", 17, 21, next);
+		curr =  new Layer("IN1", 357, 21, next);
 		this.Layers.add(curr);
 
 		for(int i=1;i < Layers.size();i++)
@@ -391,7 +391,7 @@ class Layer {
 		double[] returnVal = new double[perceptrons.size()];
 		for(int i=0;i<perceptrons.size();i++)
 		{
-			returnVal[i]  = perceptrons.get(i).getOutput(input[i]);
+			returnVal[i] =  = perceptrons.get(i).getOutput(input[i]);
 		}
 		output = returnVal;
 		//System.out.println(output);

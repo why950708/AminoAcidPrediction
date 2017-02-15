@@ -201,7 +201,7 @@ public class Lab2 {
 			
 		//Input layer 1
 		next = curr;
-		curr =  new Layer("IN1", 17, 21, next);
+		curr =  new Layer("IN1", 357, 21, next);
 		this.Layers.add(curr);
 
 		for(int i=1;i < Layers.size();i++)
