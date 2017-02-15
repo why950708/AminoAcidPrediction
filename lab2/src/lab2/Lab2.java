@@ -24,7 +24,7 @@ public class Lab2 {
 		this.IOPair = new HashMap<Character, double[]>();
 		initilizeIOpair();
 		ArrayList<Layer> Layers = new ArrayList<Layer>();
-		createTheNetWork();
+		createTheNetWork(3, 3, 17, 21);
 
 	}
 
@@ -166,21 +166,50 @@ public class Lab2 {
 		}
 		
 		//Forward pass
-		double[] inputLayer2 = Layers.get(1).calcOutput(inputArr);
+		double[] inputLayer2 = Layers.get(0).calcOutput(inputArr);
 		
-		double[] inputHidden = Layers.get(2).calcOutput(inputLayer2);
+	//	double[] inputHidden = Layers.get(2).calcOutput(inputLayer2);
 	}
 
 	// TODO
-	private void createTheNetWork() {
-		// Input Layer 1
-		this.Layers.add(new Layer("IN1"));
-		// Input Layer 2
-		this.Layers.add(new Layer("IN2"));
-		// Hidden Layer
-		this.Layers.add(new Layer("HID"));
-		// Output Layer
-		this.Layers.add(new Layer("OUT"));
+	private void createTheNetWork(int numOfOutput, int numOfHidden, int numOfInput1, int numOfInput2) {
+		
+		//Output Layer
+		Layer next = null;
+		Layer curr = new Layer("OUT", 3, new double[3][3], null);
+		this.Layers.add(next);
+		
+		//Hidden Layer
+		next = curr;
+		curr =  new Layer("HID",3,new double[3][3],next);
+		
+		this.Layers.add(next);
+		
+		//Input layer 2
+		next = curr;
+		curr =  new Layer("IN2",17, new double[17][21],next);
+		
+		this.Layers.add(next);
+			
+		//Input layer 1
+		next = curr;
+		curr =  new Layer("IN1", 21, new double[21][1], next);
+		this.Layers.add(next);
+
+		for(int i=1;i<Layers.size();i++)
+		{
+			Layers.get(i-1).prevLayer = Layers.get(i);
+		}
+			
+		
+//		// Input Layer 1
+//		this.Layers.add(new Layer("IN1"));
+//		// Input Layer 2
+//		this.Layers.add(new Layer("IN2"));
+//		// Hidden Layer
+//		this.Layers.add(new Layer("HID"));
+//		// Output Layer
+//		this.Layers.add(new Layer("OUT"));
 	}
 
 	// Transfer label value to input values
@@ -238,11 +267,15 @@ class Perceptron {
 	double[] weights;
 	double output;
 	double sum;
+	double[][] inputs;
 
 	// TODO
-	public Perceptron(String type, int inputSize) {
-		weights = new double[inputSize];
+	public Perceptron(String type, double[] inputs) {
+		//Initialize the matrix for weights using the number of inputs
+		weights = new double[inputs.length];
+		//Set the type
 		this.type = type;
+		//initilized the weights using the type
 		if (this.isType("IN1")) {
 	
 			weights[0] = 1;
@@ -307,14 +340,27 @@ class Perceptron {
 class Layer {
 	ArrayList<Perceptron> perceptrons = new ArrayList<Perceptron>();
 	String type;
+	double[][] inputs;
+	Layer nextLayer;
+	Layer prevLayer;
+	int numOfNodes;
+	
+	
 
 	// TODO
-	public Layer(String type,int numOfNodes,int[] inputNumArray) {
+	public Layer(String type,int numOfNodes,double[][] inputNumArray,Layer nextLayer) {
 		this.type = type;
+		this.numOfNodes = numOfNodes;
 		for(int i=0;i<numOfNodes;i++)
 		{
 			perceptrons.add(new Perceptron(type, inputNumArray[i]));
 		}
+	}
+	
+	//TODO
+	public void setPrevLayer(Layer prev)
+	{
+		this.prevLayer = prev;
 	}
 
 	// TODO
@@ -334,7 +380,7 @@ class Layer {
 		double[] returnVal = new double[perceptrons.size()];
 		for(int i=0;i<perceptrons.size();i++)
 		{
-			returnVal[i] = perceptrons.get(i).getBackProp()
+			returnVal[i] = perceptrons.get(i).getBackProp();
 		}
 		return returnVal;
 
@@ -343,9 +389,21 @@ class Layer {
 	public void train(double[] otherFactors) {
 
 	}
+	
+	public int getNumOfNodes()
+	{
+		return numOfNodes;
+	}
+	
+	public void forwardPass()
+	{
+		for(int i)
+	}
+
 
 }
 
 class Network{
+	
 	
 }

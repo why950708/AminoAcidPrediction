@@ -1,0 +1,351 @@
+package lab2;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.stream.Stream;
+
+public class Lab2 {
+	ArrayList<Protein> train;
+	ArrayList<Protein> tune;
+	ArrayList<Protein> test;
+	ArrayList<Layer> Layers;
+	Network network;
+	
+	HashMap<Character, double[]> IOPair;
+
+	public Lab2(String name) {
+		this.train = fileParsing(name);
+		this.tune = seperateTune(train);
+		this.test = seperateTest(train);
+		this.IOPair = new HashMap<Character, double[]>();
+		initilizeIOpair();
+		ArrayList<Layer> Layers = new ArrayList<Layer>();
+		createTheNetWork();
+
+	}
+
+	private void initilizeIOpair() {
+		// TODO Auto-generated method stub
+
+		for (Protein protein : this.train) {
+			for (String str : protein.getPairs()) {
+				if (!IOPair.containsKey(str.charAt(0))) {
+					double[] arr = new double[21];
+					arr[IOPair.size()] = 1;
+					IOPair.put(str.charAt(0), arr);
+					if (IOPair.size() == 21)
+						return;
+				}
+			}
+		}
+	}
+
+	public static void main(String args[]) {
+		Lab2 lab2 = new Lab2(args[0]);
+		lab2.train();
+
+	}
+
+	/**
+	 * @param name
+	 * @return an Arraylist of protein type in the file
+	 */
+	public ArrayList<Protein> fileParsing(String name) {
+
+		String[] stringArray = null;
+		try (Stream<String> stream = Files.lines(Paths.get(name))) {
+			// Get the files in and make it into a String array line by line
+			stringArray = stream.toArray(size -> new String[size]);
+			// stream.forEach(System.out::println);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		// Return Val
+		ArrayList<Protein> returnVal = new ArrayList<Protein>();
+		// Saves the start and end position for each protein strain
+		ArrayList<Integer> list = new ArrayList<Integer>();
+		int index = 0;
+		// Skip the first Few Lines
+		while (index < stringArray.length && (stringArray[index].startsWith("#") || stringArray[index].length() == 0)) {
+			index++;
+		}
+
+		// The first protein start
+
+		index++;
+		list.add(index);
+		while (index < stringArray.length) {
+			if (stringArray[index].contains("<>")) {
+
+				if (stringArray[index - 1].contains("end"))
+					list.add(index - 2);
+				else
+					list.add(index - 1);
+
+				list.add(index + 1);
+			}
+
+			index++;
+		}
+		index--;
+		while (stringArray[index].contains("end")) {
+			index--;
+		}
+		index -= 2;
+
+		list.add(index);
+		// for (Integer e : list) {
+		// System.out.println(e);
+		// }
+
+		// For each num pair
+		for (int i = 0; i < list.size() / 2; i++) {
+			int start = list.get(2 * i);
+			int end = list.get(2 * i + 1);
+			// Create new protein
+			returnVal.add(new Protein(Arrays.copyOfRange(stringArray, start, end + 1)));
+		}
+
+		return returnVal;
+	}
+
+	public ArrayList<Protein> seperateTest(ArrayList<Protein> data) {
+		ArrayList<Protein> returnVal = new ArrayList<Protein>();
+		if (data == null || data.size() == 0) {
+			return returnVal;
+		}
+		// Every fifth after every fifth is taken out
+		for (int i = 4; i < data.size(); i = i + 3) {
+			returnVal.add(data.remove(i));
+		}
+		return returnVal;
+	}
+
+	public ArrayList<Protein> seperateTune(ArrayList<Protein> data) {
+		ArrayList<Protein> returnVal = new ArrayList<Protein>();
+		// Every fifth
+		if (data == null || data.size() == 0) {
+			return returnVal;
+		}
+		for (int i = 4; i < data.size(); i = i + 4) {
+			returnVal.add(data.remove(i));
+		}
+		return returnVal;
+
+	}
+
+	// Train the network
+	public void train() {
+		for (Protein element : this.train)
+			trainWithOneProtein(element);
+	}
+
+	// TODO
+	// Where the sliding window is implemented
+	private void trainWithOneProtein(Protein element) {
+		//Get all the current input
+		String[] cur17 = new String[17];
+		//Initialized the first 17
+		for(int i=0;i<17;i++)
+		{
+			cur17[i] =  element.getPos(i);
+		}
+		
+		char Label = cur17[9].charAt(2);
+		
+		double[][] inputArr = new double[17][21];
+		for(int i=0;i<17;i++)
+		{
+			char value = cur17[i].charAt(0);
+			inputArr[i]=  valueTransfer(value);
+		}
+		
+		//Forward pass
+		double[] inputLayer2 = Layers.get(1).calcOutput(inputArr);
+		
+		double[] inputHidden = Layers.get(2).calcOutput(inputLayer2);
+	}
+
+	// TODO
+	private void createTheNetWork() {
+		// Input Layer 1
+		this.Layers.add(new Layer("IN1"));
+		// Input Layer 2
+		this.Layers.add(new Layer("IN2"));
+		// Hidden Layer
+		this.Layers.add(new Layer("HID"));
+		// Output Layer
+		this.Layers.add(new Layer("OUT"));
+	}
+
+	// Transfer label value to input values
+	private double[] valueTransfer(char label) {
+		double[] returnVal = IOPair.get(label);
+		return returnVal;
+	}
+
+}
+
+class Protein {
+
+	ArrayList<String> pairs;
+
+	public Protein(String[] pairsIn) {
+		for (int i = 0; i < 8; i++) {
+			this.pairs.add("U");
+		}
+		this.pairs = new ArrayList<String>(Arrays.asList(pairsIn));
+		for (int i = 0; i < 8; i++) {
+			this.pairs.add("U");
+		}
+	}
+
+	// Get the input pair at certain position
+	public String getPos(int pos) {
+		if (pos >= pairs.size())
+			return null;
+		return pairs.get(pos);
+	}
+
+	public ArrayList<String> getPairs() {
+		ArrayList<String> returnVal = new ArrayList<>();
+		for (String str : pairs) {
+			returnVal.add(str);
+		}
+		return returnVal;
+	}
+
+	// Length of pairs
+	public int length() {
+		return pairs.size();
+	}
+
+	// For printing
+	@Override
+	public String toString() {
+		return "Protein [pairs=" + pairs + "]";
+	}
+
+}
+
+class Perceptron {
+	String type;
+	double[] weights;
+	double output;
+	double sum;
+
+	// TODO
+	public Perceptron(String type, int inputSize) {
+		weights = new double[inputSize];
+		this.type = type;
+		if (this.isType("IN1")) {
+	
+			weights[0] = 1;
+		} else
+			
+			for(int i = 0; i<weights.length;i++)
+			weights[i] = Math.random();
+	}
+
+	// Check the type of the perceptron
+	public boolean isType(String type) {
+		return this.type.equals(type);
+	}
+
+	// Calculate the sum and get the output for each node
+	public double getOutput(double[] inputs) {
+		// Get Sum first
+		double cache = 0;
+		for (int i = 0; i < inputs.length; i++) {
+			cache += inputs[i] * weights[i];
+		}
+		this.sum = cache;
+		// Output to the next node according to the type
+		if (this.isType("HID")) {
+			// Sigmoid
+			return sigmoid(sum);
+		}
+		if (this.isType("OUT")) {
+			// RELU
+			return relu(sum);
+		}
+		if (this.isType("IN2")) {
+			return sum;
+		}
+		return inputs[0];
+
+	}
+
+	//TODO
+	// Using the info from the previous layer to calculate the change of weights
+	public void train(double[] otherFactors) {
+		double[] changeOfWeights;
+	}
+
+	// TODO
+	//Get the otherFactors for the previous layer
+	public double getBackProp() {
+		return 0.0;
+	}
+	
+	private double sigmoid(double x) {
+		return (1 / (1 + Math.pow(Math.E, (-1 * x))));
+	}
+
+	private double relu(double x) {
+		if (x < 0)
+			return 0;
+		return x;
+	}
+}
+
+class Layer {
+	ArrayList<Perceptron> perceptrons = new ArrayList<Perceptron>();
+	String type;
+
+	// TODO
+	public Layer(String type,int numOfNodes,int[] inputNumArray) {
+		this.type = type;
+		for(int i=0;i<numOfNodes;i++)
+		{
+			perceptrons.add(new Perceptron(type, inputNumArray[i]));
+		}
+	}
+
+	// TODO
+	//Calculate the output for the whole layer
+	public double[] calcOutput(double[][] input) {
+		double[] returnVal = new double[perceptrons.size()];
+		for(int i=0;i<perceptrons.size();i++)
+		{
+			returnVal[i] = perceptrons.get(i).getOutput(input[i]);
+		}
+		return returnVal;
+	}
+	//TODO
+	//Calculate the output for the whole previous layer
+	public double[] getBackProp()
+	{
+		double[] returnVal = new double[perceptrons.size()];
+		for(int i=0;i<perceptrons.size();i++)
+		{
+			returnVal[i] = perceptrons.get(i).getBackProp()
+		}
+		return returnVal;
+
+	}
+	// TODO
+	public void train(double[] otherFactors) {
+
+	}
+
+}
+
+class Network{
+	
+}
