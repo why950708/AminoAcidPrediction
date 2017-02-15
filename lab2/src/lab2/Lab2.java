@@ -14,7 +14,6 @@ public class Lab2 {
 	ArrayList<Protein> test;
 	ArrayList<Layer> Layers;
 	Network network;
-	
 	HashMap<Character, double[]> IOPair;
 
 	public Lab2(String name) {
@@ -23,7 +22,7 @@ public class Lab2 {
 		this.test = seperateTest(train);
 		this.IOPair = new HashMap<Character, double[]>();
 		initilizeIOpair();
-		ArrayList<Layer> Layers = new ArrayList<Layer>();
+		 Layers = new ArrayList<Layer>();
 		createTheNetWork(3, 3, 17, 21);
 
 	}
@@ -46,7 +45,14 @@ public class Lab2 {
 
 	public static void main(String args[]) {
 		Lab2 lab2 = new Lab2(args[0]);
-		lab2.train();
+		Layer input = lab2.Layers.get(lab2.Layers.size()-1);
+		//System.out.println(input);
+		Protein element = lab2.train.get(0);
+		double[][] inputs = lab2.trainWithOneProtein(element);		
+		input.forwardPass(inputs);
+		System.out.println(lab2.Layers.get(0).getOutput());
+		
+		//lab2.train();
 
 	}
 
@@ -140,14 +146,15 @@ public class Lab2 {
 	}
 
 	// Train the network
-	public void train() {
+	public void trainNetWork() {
 		for (Protein element : this.train)
 			trainWithOneProtein(element);
 	}
 
 	// TODO
 	// Where the sliding window is implemented
-	private void trainWithOneProtein(Protein element) {
+	//Temporarily used for the forward pass
+	private double[][] trainWithOneProtein(Protein element) {
 		//Get all the current input
 		String[] cur17 = new String[17];
 		//Initialized the first 17
@@ -165,8 +172,9 @@ public class Lab2 {
 			inputArr[i]=  valueTransfer(value);
 		}
 		
+		return inputArr;
 		//Forward pass
-		double[] inputLayer2 = Layers.get(0).calcOutput(inputArr);
+	//	double[] inputLayer2 = Layers.get(0).calcOutput(inputArr);
 		
 	//	double[] inputHidden = Layers.get(2).calcOutput(inputLayer2);
 	}
@@ -176,29 +184,29 @@ public class Lab2 {
 		
 		//Output Layer
 		Layer next = null;
-		Layer curr = new Layer("OUT", 3, new double[3][3], null);
-		this.Layers.add(next);
+		Layer curr = new Layer("OUT", 3, 3/*num of inputs per node*/, next);
+		this.Layers.add(curr);
 		
 		//Hidden Layer
 		next = curr;
-		curr =  new Layer("HID",3,new double[3][3],next);
+		curr =  new Layer("HID",3,3,next);
 		
-		this.Layers.add(next);
+		this.Layers.add(curr);
 		
 		//Input layer 2
 		next = curr;
-		curr =  new Layer("IN2",17, new double[17][21],next);
+		curr =  new Layer("IN2",17, 21,next);
 		
-		this.Layers.add(next);
+		this.Layers.add(curr);
 			
 		//Input layer 1
 		next = curr;
-		curr =  new Layer("IN1", 21, new double[21][1], next);
-		this.Layers.add(next);
+		curr =  new Layer("IN1", 21, 1, next);
+		this.Layers.add(curr);
 
-		for(int i=1;i<Layers.size();i++)
+		for(int i=1;i < Layers.size();i++)
 		{
-			Layers.get(i-1).prevLayer = Layers.get(i);
+			this.Layers.get(i-1);//.setPrevLayer(Layers.get(i));
 		}
 			
 		
@@ -213,7 +221,7 @@ public class Lab2 {
 	}
 
 	// Transfer label value to input values
-	private double[] valueTransfer(char label) {
+	private  double[] valueTransfer(char label) {
 		double[] returnVal = IOPair.get(label);
 		return returnVal;
 	}
@@ -225,6 +233,7 @@ class Protein {
 	ArrayList<String> pairs;
 
 	public Protein(String[] pairsIn) {
+		this.pairs = new ArrayList<String>();
 		for (int i = 0; i < 8; i++) {
 			this.pairs.add("U");
 		}
@@ -267,12 +276,12 @@ class Perceptron {
 	double[] weights;
 	double output;
 	double sum;
-	double[][] inputs;
+	double[]inputs;
 
 	// TODO
-	public Perceptron(String type, double[] inputs) {
+	public Perceptron(String type, int numOfInputsEachNode) {
 		//Initialize the matrix for weights using the number of inputs
-		weights = new double[inputs.length];
+		weights = new double[numOfInputsEachNode];
 		//Set the type
 		this.type = type;
 		//initilized the weights using the type
@@ -292,6 +301,8 @@ class Perceptron {
 
 	// Calculate the sum and get the output for each node
 	public double getOutput(double[] inputs) {
+		//Save the inputs
+		this.inputs = inputs;
 		// Get Sum first
 		double cache = 0;
 		for (int i = 0; i < inputs.length; i++) {
@@ -311,7 +322,6 @@ class Perceptron {
 			return sum;
 		}
 		return inputs[0];
-
 	}
 
 	//TODO
@@ -340,23 +350,29 @@ class Perceptron {
 class Layer {
 	ArrayList<Perceptron> perceptrons = new ArrayList<Perceptron>();
 	String type;
-	double[][] inputs;
+	//double[][] inputs;
 	Layer nextLayer;
 	Layer prevLayer;
 	int numOfNodes;
-	
+	double[] output;
 	
 
 	// TODO
-	public Layer(String type,int numOfNodes,double[][] inputNumArray,Layer nextLayer) {
+	public Layer(String type,int numOfNodes,int numOfInputsEachNode,Layer nextLayer) {
 		this.type = type;
 		this.numOfNodes = numOfNodes;
 		for(int i=0;i<numOfNodes;i++)
 		{
-			perceptrons.add(new Perceptron(type, inputNumArray[i]));
+			perceptrons.add(new Perceptron(type, numOfInputsEachNode));
 		}
 	}
 	
+	
+	//TOOD
+	public double[] getOutput()
+	{
+		return output;
+	}
 	//TODO
 	public void setPrevLayer(Layer prev)
 	{
@@ -371,6 +387,7 @@ class Layer {
 		{
 			returnVal[i] = perceptrons.get(i).getOutput(input[i]);
 		}
+		output = returnVal;
 		return returnVal;
 	}
 	//TODO
@@ -395,9 +412,15 @@ class Layer {
 		return numOfNodes;
 	}
 	
-	public void forwardPass()
+	public void forwardPass(double[][] input)
 	{
-		for(int i)
+		if(nextLayer == null) return;
+		double[][] inputToNextLayer = new double[nextLayer.getNumOfNodes()][numOfNodes];
+		for(int i = 0; i<numOfNodes ; i++)
+		{
+			inputToNextLayer[i] = this.calcOutput(input);
+		}
+		nextLayer.forwardPass(inputToNextLayer);
 	}
 
 
