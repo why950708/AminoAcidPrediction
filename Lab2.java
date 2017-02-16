@@ -12,6 +12,7 @@ public class Lab2 {
     static int acidNum = 21;
     static int padNum = 8;
     static int windowSize = 2*padNum + 1;
+    static final int EPOCH_NUM = 1000;
    // static final int RAW_INPUT_LAYER_NUM = windowSize;
     static final int input_type_Nums = 21;
     static final int INPUT_LAYER_NUM = windowSize;
@@ -20,7 +21,7 @@ public class Lab2 {
     static List<netPerceptron> input_layer;
     static List<netPerceptron> hidden_layer;
     static List<netPerceptron> output_layer;
-    static double alpha = 0.01;
+    static double alpha = 0.1;
     public static void main(String[] args) throws IOException {
         String train_FileName = args[0];
         //String tune_FileName = args[1];
@@ -79,8 +80,30 @@ public class Lab2 {
         for (netPerceptron perceptron: hidden_layer){
             perceptron.nextLayer = output_layer;
         }
-
         // train
+        int count = 0;
+        double prev_tune_accuracy = 0;
+        for (int i = 0 ; i < EPOCH_NUM ; i++){
+            training(train);
+        double tune_accuracy =  calculate_accuracy(tune);
+            if((tune_accuracy < prev_tune_accuracy) && (tune_accuracy > 0.59) ){
+            if(count > 2){
+                break;
+            }
+            else{
+            count++;
+            }
+        }
+        prev_tune_accuracy = tune_accuracy;
+            System.out.println("tune_accuracy: " + tune_accuracy);
+        }
+
+        System.out.println("test accuracy: " + calculate_accuracy(test) + " with count: " + count);
+
+
+        }
+
+    private static void training(List<Strian> train) {
         for (Strian strian : train) {
             List<dfvec>  raw_inputs = convertToOneHotFvec(strian);
             int max_batchNum = raw_inputs.size() - (windowSize - 1);
@@ -93,73 +116,93 @@ public class Lab2 {
                         "batchNum for each strain (protein sequence) can take ");
                 batchNum = real_batchNum;
             }
-       //     if(raw_inputs.isEmpty()) System.out.println("raw_inputs empty");
+            //     if(raw_inputs.isEmpty()) System.out.println("raw_inputs empty");
             List<List<dfvec>> batch = new ArrayList<>();
             int start = 0, end = windowSize - 1;
 
             while(end < raw_inputs.size()){
                 if(start % real_batchNum == 0 && start != 0){
-                update(batch);
-                batch.clear();
+                    update(batch);
+                    batch.clear();
                 }
 
                 List<dfvec> sample = raw_inputs.subList(start, end + 1);
                 batch.add(sample);
                 start++;
                 end++;
-            }
-        }
 
-        // test accuracy
+               /* count++;
+                netPerceptron dashabi = input_layer.get(0);
+                //System.out.println( "input: " + dashabi.netinput + " | " + "output: "+ dashabi.output +  " | " +  "delta: " + dashabi.delta);
+                System.out.println( Arrays.toString(dashabi.weights));*/
+
+            }
+
+        }
+    }
+
+
+    private static double calculate_accuracy(List<Strian> test) {
         int correct = 0 ;
 
         int start = 0, end = windowSize - 1;
+        int n = 0;
+        for (Strian s : test) {
+            n += s.ps.size();
+        }
         for(Strian s : test){
             List<dfvec>  raw_inputs = convertToOneHotFvec(s);
-           // List<dfvec> test_inputs = convertToOneHotFvec(s);
+            // List<dfvec> test_inputs = convertToOneHotFvec(s);
             // List<List<dfvec>> batch = new ArrayList<>();
-            List<dfvec> sample = raw_inputs.subList(start, end + 1);
-            char label = raw_inputs.get((start + end + 2)/2).label;
-            // batch.add(sample);
-            Calculate_Output(sample);
-            int maxidx = 0;
-            double max = 0;
-            for (netPerceptron p : output_layer) {
-                if(p.output > max){
-                    maxidx = output_layer.indexOf(p);
-                    max = p.output;
+            start = 0;
+            end = windowSize - 1;
+            //List<dfvec> sample = raw_inputs.subList(start, end + 1);
+            while(end < raw_inputs.size()){
+                char label = raw_inputs.get((start + end + 2)/2).label;
+                List<dfvec> in = raw_inputs.subList(start, end + 1);
+                Calculate_Output(in);
+                //
+                int maxidx = 0;
+                double max = 0;
+                for (netPerceptron p : output_layer) {
+                    if(p.output > max){
+                        maxidx = output_layer.indexOf(p);
+                        max = p.output;
+                    }
                 }
-            }
-            char output = ' ';
-            if(maxidx == 0){
-                output = '_';
-            }
-            else if(maxidx == 1){
-                output = 'e';
-            }
-            else if (maxidx == 2){
-                output = 'h';
-            }
-            else{
-                System.exit(11);
-            }
+                char output = ' ';
+                if(maxidx == 0){
+                    output = '_';
+                }
+                else if(maxidx == 1){
+                    output = 'e';
+                }
+                else if (maxidx == 2){
+                    output = 'h';
+                }
+                else{
+                    System.exit(11);
+                }
 
-            if (output == label){
-                correct++;
+                //  System.out.println("output: " + output + " label: " + label);
+
+                if (output == label){
+                    correct++;
+                }
+                else{
+                }
+                start++;
+                end++;
+
+                clear_input_output_delta();
             }
-            else{
-                System.out.println("output: " + output + "label: " + label);
-            }
-
-
-            start++;
-            end++;
-            }
-
-
-            clear_input_output_delta();
-        System.out.println("test_accuracy: " + correct*1.0/test.size());
+            // batch.add(sample);
         }
+
+        clear_input_output_delta();
+       // System.out.println("test_accuracy: " + correct*1.0/n);
+        return correct*1.0/n;
+    }
 
 
     private static void clear_input_output_delta() {
@@ -214,16 +257,16 @@ public class Lab2 {
             teacher[labels.indexOf(sample.get((windowSize + 1)/2).label)] = 1.0;
 
             for (int i = 0; i < errs.length; i++) {
-                netPerceptron p = output_layer.get(i);
+                 netPerceptron p = output_layer.get(i);
                  errs[i] += teacher[i] - p.output;
             }
         }
         // average the sum to get the avg input (for batch update)
-        for (dfvec f : input_avg) {
+        /*for (dfvec f : input_avg) {
             for (int i = 0; i < f.features.length; i++) {
                 f.features[i]/=(samples.size());
             }
-        }
+        }*/
         //System.out.println(input_avg);
        /* for (int i = 0; i < errs.length; i++) {
             System.out.print(errs[i] + " ");
@@ -231,7 +274,7 @@ public class Lab2 {
 
         // backprop delta
         for (netPerceptron op : output_layer) {
-            op.delta = op.sigmoidP(op.netinput);
+            op.delta = op.sigmoidP(op.output)*errs[output_layer.indexOf(op)];
             // update next layer delta
             for (int i = 0; i < op.weights.length - 1; i++) {
                 netPerceptron child = op.prevLayer.get(i);
@@ -269,14 +312,13 @@ public class Lab2 {
             }
         }
 
-
        clear_input_output_delta();
 
     }
 
     private static void Calculate_Output(List<dfvec> sample) {
         double [] output = new double[OUTPUT_LAYER_NUM];
-        System.out.println("sample size: " + sample.size() + "input_layer: " + input_layer.size());
+        //System.out.println("sample size: " + sample.size() + "input_layer: " + input_layer.size());
         // input layer
         for(dfvec featureVec : sample){
             int i = sample.indexOf(featureVec);
@@ -310,9 +352,9 @@ public class Lab2 {
 
         //pad first padNum: 8
 
-        dfvec solvent = new dfvec('0', 21, "S");
         for(int i  = 0 ; i < padNum; i++){
-            dfvecs.add(solvent);
+        dfvec solvent = new dfvec('0', 21, "S");
+        dfvecs.add(solvent);
         }
              char label = ' ';
         for (pair p : sample.ps) {
@@ -324,6 +366,7 @@ public class Lab2 {
 
         // pad last padNum: 8
         for(int i  = 0 ; i < padNum; i++){
+            dfvec solvent = new dfvec('0', 21, "S");
             dfvecs.add(solvent);
         }
 
@@ -530,9 +573,10 @@ class netPerceptron{
         }
 
         // initialize weights
+        Random r = new Random();
         weights = new double[input_Num];
         for (int i = 0; i < weights.length; i++) {
-            weights[i] = 1;
+            weights[i] = r.nextDouble();
         }
 
         // generate random weight value for bias
