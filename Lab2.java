@@ -86,7 +86,6 @@ public class Lab2 {
                 }
                 prev_tune_accuracy = tune_accuracy;
                 System.out.println("tune_accuracy: " + tune_accuracy);
-
                 // reset the learning rate
                 alpha = origin_alpha;
         }
