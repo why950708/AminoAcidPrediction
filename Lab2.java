@@ -1,5 +1,5 @@
-import com.sun.deploy.uitoolkit.Window;
-
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -50,6 +50,9 @@ public class Lab2 {
         for (Strian strian : removeList) {
             train.remove(strian);
         }
+        System.out.println("train sets size:" + train.size());
+        System.out.println("tune sets size:" + tune.size());
+        System.out.println("test sets size:" + test.size());
         List<ANN> nl = new ArrayList<>();
         for (int i = 0; i < ENSEMBLE_ANN_NUM; i++) {
         ANN network1 = new ANN();
@@ -73,17 +76,21 @@ public class Lab2 {
                 }
                 double tune_accuracy = calculate_accuracy(tune, nl);
                 //tune
-                if((tune_accuracy < prev_tune_accuracy) && (tune_accuracy > 0.6) ){
+                if (tune_accuracy > 0.61){
+                System.out.println("tune_accuracy: " + tune_accuracy);
+                    break;
+                }
+                if((tune_accuracy < prev_tune_accuracy) && (tune_accuracy > 0.59) ){
                     if(count > 2){
+                System.out.println("tune_accuracy: " + tune_accuracy);
                         break;
                     }
-                    else if (tune_accuracy > 0.611){
-                        break;
-                    }
+
                     else{
                         count++;
                     }
                 }
+
                 prev_tune_accuracy = tune_accuracy;
                 System.out.println("tune_accuracy: " + tune_accuracy);
 
@@ -91,10 +98,12 @@ public class Lab2 {
                 alpha = origin_alpha;
         }
 
-
-        System.out.println("test accuracy: " + calculate_accuracy(test, nl) + " with count: " + count);
-
-        }
+        Double test_accuracy = calculate_accuracy(test, nl);
+    //    System.out.println("test accuracy: " + test_accuracy + " with count: " + count);
+        FileWriter outfile = new FileWriter(new File("lab2_data.csv"), true);
+        outfile.write(test_accuracy.toString()+"\n" );
+        outfile.close();
+    }
 
 
 
@@ -103,6 +112,7 @@ public class Lab2 {
         int correct = 0 ;
         int start = 0, end = windowSize - 1;
         int n = 0;
+       // System.out.println("test set size: " + test.size());
         for (Strian s : test) {
             n += s.ps.size();
         }
@@ -150,13 +160,12 @@ public class Lab2 {
 
                 start++;
                 end++;
-                //  System.out.println("output: " + output + " label: " + label);
+        //        //  System.out.println("output: " + output + " label: " + label);
             }
 
         }
 
 
-       // System.out.println("test_accuracy: " + correct*1.0/n);
         return correct*1.0/n;
     }
 
@@ -232,8 +241,8 @@ public class Lab2 {
         // split according to "<>"
         List<Strian> samples = new ArrayList<>();
         // pair p = null;
-        List acids = new ArrayList<String>();
-        List labels = new ArrayList<String>();
+        List <String>acids = new ArrayList<String>();
+        List <String>labels = new ArrayList<String>();
         for (String s : raw_input) {
             if(s.trim().startsWith("#") || s.equals("")){
                 continue;
