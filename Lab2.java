@@ -11,6 +11,7 @@ import java.util.stream.Stream;
  */
 public class Lab2 {
     static int batchNum = 1;
+    static int batchNum = 1;
     static int acidNum = 21;
     static int padNum = 8;
     static int windowSize = 2*padNum + 1;
@@ -18,14 +19,17 @@ public class Lab2 {
    // static final int RAW_INPUT_LAYER_NUM = windowSize;
     static final int input_type_Nums = 21;
     static final int INPUT_LAYER_NUM = windowSize;
-    static final int HIDDEN_LAYER_NUM = 7;
-    static final int OUTPUT_LAYER_NUM = 5;
+    static final int HIDDEN_LAYER_NUM = 9;
+    static final int OUTPUT_LAYER_NUM = 3;
     static final int ENSEMBLE_ANN_NUM = 1;
+    static double beta = 0.01;
    /* static List<netPerceptron> input_layer;
     static List<netPerceptron> hidden_layer;
     static List<netPerceptron> output_layer;*/
     static double alpha = 0.1;
-    static double decay = 0.1*alpha/EPOCH_NUM;
+    static double decay = 10*alpha/EPOCH_NUM;
+    static double limit = 0.6;
+    static int conut = 0;
     public static void main(String[] args) throws IOException {
         String train_FileName = args[0];
         //String tune_FileName = args[1];
@@ -50,42 +54,54 @@ public class Lab2 {
         for (Strian strian : removeList) {
             train.remove(strian);
         }
-        System.out.println("train sets size:" + train.size());
-        System.out.println("tune sets size:" + tune.size());
-        System.out.println("test sets size:" + test.size());
+
         List<ANN> nl = new ArrayList<>();
         for (int i = 0; i < ENSEMBLE_ANN_NUM; i++) {
         ANN network1 = new ANN();
-        network1.dropout(2);
-        network1.dropout(1);
+        /*network1.dropout(2);
+        network1.dropout(1);*/
         nl.add(network1);
         }
-
             int count = 0;
             final double origin_alpha = alpha;
             double prev_tune_accuracy = 0;
-
+            int batch_size = train.size()/ENSEMBLE_ANN_NUM;
             for (int i = 0 ; i < EPOCH_NUM ; i++){
+              //  int dropN = i/drop_size;
                 // set the appropriate learning rate: decay as time goes
                 alpha = alpha*1/(1 + decay * i);
                 // shuffle the order of list
                 Collections.shuffle(train);
                 for (ANN ann : nl) {
                     // train
-                 ann.training(train);
+                    int batch_num = nl.indexOf(ann);
+                    if(batch_num != nl.size() - 1){
+                       List<Strian> subset = new ArrayList<Strian>(train.subList(batch_size*batch_num, (batch_num + 1)*batch_size));
+                        ann.training(train);
+                    }
+                    else{
+                        List<Strian> subset = new ArrayList<Strian>(train.subList(batch_size*batch_num, train.size()));
+                        ann.training(train);
+                    }
                 }
+
+                // scale weights
+                for (ANN ann : nl) {
+                    ann.scale(1- ann.dropout_rates);
+                }
+
                 double tune_accuracy = calculate_accuracy(tune, nl);
+
                 //tune
-                if (tune_accuracy > 0.61){
+                if (tune_accuracy > 0.62){
                 System.out.println("tune_accuracy: " + tune_accuracy);
                     break;
                 }
-                if((tune_accuracy < prev_tune_accuracy) && (tune_accuracy > 0.59) ){
+                if((tune_accuracy < prev_tune_accuracy) && (tune_accuracy > limit)){
                     if(count > 2){
                 System.out.println("tune_accuracy: " + tune_accuracy);
-                        break;
+                    break;
                     }
-
                     else{
                         count++;
                     }
@@ -93,19 +109,45 @@ public class Lab2 {
 
                 prev_tune_accuracy = tune_accuracy;
                 System.out.println("tune_accuracy: " + tune_accuracy);
-
                 // reset the learning rate
                 alpha = origin_alpha;
+                // reset the all the ANNs in nl
+               for (ANN ann : nl) {
+                    ann.scale(1/(1- ann.dropout_rates));
+                }
         }
 
+        // scale weights
+        /*for (ANN ann : nl) {
+            ann.scale(1- ann.dropout_rates);
+        }*/
+
         Double test_accuracy = calculate_accuracy(test, nl);
-    //    System.out.println("test accuracy: " + test_accuracy + " with count: " + count);
+        System.out.println("test accuracy: " + test_accuracy + " with count: " + count);
+       // FileWriter outfile = new FileWriter(new File("lab2_data.csv"), true);
         FileWriter outfile = new FileWriter(new File("lab2_data.csv"), true);
-        outfile.write(test_accuracy.toString()+"\n" );
+        outfile.write(test_accuracy.toString()+"," );
+        outfile.write(Integer.toString(i) + ",");
+        outfile.write(" "+ENSEMBLE_ANN_NUM+ ",");
+        outfile.write(" "+ HIDDEN_LAYER_NUM + ",");
+        outfile.write(" " + decay+",");
+        outfile.write(" " + beta + ",");
+        outfile.write(" EPOCH_NUM "+ EPOCH_NUM+ ",");
+        outfile.write(" limit "+ limit+ ",");
+        outfile.write(" alpha "+ alpha+ "\n");
         outfile.close();
     }
 
-
+    private static void printWeights(List<ANN> nl) {
+        for (ANN ann : nl) {
+            System.out.println("ANN_NUM: " + nl.indexOf(ann));
+            for (netPerceptron p :ann.output_layer){
+                System.out.println(Arrays.toString(p.weights));
+                System.out.println("............................");
+            }
+            System.out.println("---------------------------");
+        }
+    }
 
 
     protected static double calculate_accuracy(List<Strian> test, List<ANN> nl) {
@@ -119,9 +161,9 @@ public class Lab2 {
         for(Strian s : test){
             List<dfvec>  raw_inputs = convertToOneHotFvec(s);
             start = 0;
-            end = windowSize - 1;
+           end = windowSize - 1;
             while(end < raw_inputs.size()){
-                char label = raw_inputs.get((start + end + 2)/2).label;
+                char label = raw_inputs.get((start + end)/2).label;
                 List<Character>  voteoutput= new ArrayList<Character>();
                 for (ANN ann : nl) {
                     List<dfvec> in = raw_inputs.subList(start, end + 1);
@@ -147,11 +189,20 @@ public class Lab2 {
                     else{
                         System.exit(11);
                     }
+
+
+                   // System.out.print(" raw output: " + output);
                     voteoutput.add(output);
                     ann.clear_input_output_delta();
             }
                 // ensemble final output
+              //  System.out.print( " voteoutput.size(): " + (voteoutput.size()));
                 char enout = majority(voteoutput);
+          //      if(print){
+             //   System.out.println( " enout: " + enout + "label :" + label);
+          //      }
+                voteoutput.clear();
+           //    System.out.println("enout: " + enout + "label: " + label);
              if (enout == label){
                     correct++;
                 }
@@ -160,12 +211,9 @@ public class Lab2 {
 
                 start++;
                 end++;
-        //        //  System.out.println("output: " + output + " label: " + label);
             }
 
         }
-
-
         return correct*1.0/n;
     }
 
@@ -259,13 +307,7 @@ public class Lab2 {
 
             }
             else if(s.trim().equals("end") || s.trim().equals("<end>")){
-                // add created one
                 continue;
-                /*Strian cursample = new Strian(acids, labels);
-                samples.add(cursample);
-                acids.clear();
-                labels.clear();*/
-                //System.out.println("<end>" );
             }
             else{
                 String[] fields = s.trim().split(" ");
@@ -294,11 +336,14 @@ public class Lab2 {
 
 
 class ANN extends Lab2{
-    static double dropout_rates = 1/3;
+    //static final double beta = 0.9;
+    static final double dropout_rates = 0;//(1.0/3);
     List<netPerceptron> input_layer;
     List<netPerceptron> hidden_layer;
     List<netPerceptron> output_layer;
+    Map<netPerceptron,Double[][]> droppedWeights;
     public ANN() {
+        droppedWeights = new HashMap<>();
         // build network
         // forward
         input_layer  = new ArrayList<netPerceptron>();
@@ -332,6 +377,8 @@ class ANN extends Lab2{
         for (netPerceptron perceptron: hidden_layer){
             perceptron.nextLayer = output_layer;
         }
+
+
     }
 
     public void dropout(int layer){
@@ -344,14 +391,34 @@ class ANN extends Lab2{
         Random r = new Random();
         //int hiddenDropOutNum = r.nextInt(HIDDEN_LAYER_NUM/2);
         if(layer == 1){
-
-        for(int i= 0 ; i < HIDDEN_LAYER_NUM* dropout_rates; i++){
+            int dropNum = (int) Math.floor(HIDDEN_LAYER_NUM * dropout_rates);
+        for(int i = 0 ; i < dropNum; i++){
             int target = r.nextInt(HIDDEN_LAYER_NUM);
             // reset the weight for the target perceptron
             netPerceptron p = hidden_layer.get(target);
+            //get all of the weights that connect to p
+            Double[][] connected = new Double[2][];
+            connected[0] = new Double[INPUT_LAYER_NUM];
+            for(int j = 0; j < INPUT_LAYER_NUM; j++){
+                connected[0][j] = p.weights[j];
+            }
+            //System.arraycopy(p.weights, 0 , connected[0],0, p.weights.length);
+            connected[1]= new Double[p.nextLayer.size()];
+            for (netPerceptron parent : p.nextLayer) {
+                connected[1][p.nextLayer.indexOf(parent)] = parent.weights[hidden_layer.indexOf(p)];
+            }
+            if(droppedWeights.containsKey(p)){
+                // try again
+                i --;
+                continue;
+            }
+            else{
+                // store connected weights to the map
+                droppedWeights.put(p,connected);
+            }
             // reset backward
             for (int j = 0; j < p.weights.length; j++) {
-                p.weights[i] = 0;
+                p.weights[j] = 0;
             }
             // reset forward
             for (netPerceptron parent : p.nextLayer) {
@@ -362,25 +429,50 @@ class ANN extends Lab2{
 
         else{
         // Randomly Dropout Perceptron on input layer
-        for(int i= 0 ; i < INPUT_LAYER_NUM* dropout_rates; i++){
+        for(int i= 0 ; i < (int) Math.floor(INPUT_LAYER_NUM* dropout_rates); i++){
             int target = r.nextInt(INPUT_LAYER_NUM);
             // reset the weight for the target perceptron
             netPerceptron p = input_layer.get(target);
+            Double[][] connected = new Double[2][];
+            connected[0] = new Double[input_type_Nums];
+            //System.out.println(p.weights.length + "  " + connected[0].length);
+            for (int j = 0; j < connected[0].length; j++) {
+                connected[0][j] = p.weights[j];
+            }
+           // System.arraycopy(p.weights, 0 , connected[0],0, p.weights.length);
+            connected[1]= new Double[p.nextLayer.size()];
+            for (netPerceptron parent : p.nextLayer) {
+                int idx = hidden_layer.indexOf(parent);
+                connected[1][p.nextLayer.indexOf(parent)] = parent.weights[idx];
+            }
+            if(droppedWeights.containsKey(p)){
+                // try again
+                i--;
+                continue;
+            }
+            else{
+                // store connected weights to the map
+                droppedWeights.put(p,connected);
+            }
+
             // reset backward
             for (int j = 0; j < p.weights.length; j++) {
-                p.weights[i] = 0;
+                p.weights[j] = 0;
             }
             // reset forward
             for (netPerceptron parent : p.nextLayer) {
-                parent.weights[hidden_layer.indexOf(p)] = 0;
+                parent.weights[input_layer.indexOf(p)] = 0;
             }
         }
         }
-        // scale the rest of weights by
+
     }
 
     public void training(List<Strian> train) {
         for (Strian strian : train) {
+            // randomly drop out perceptron:
+            dropout(2);
+            dropout(1);
             List<dfvec>  raw_inputs = convertToOneHotFvec(strian);
             int max_batchNum = raw_inputs.size() - (windowSize - 1);
             int real_batchNum = Math.min(batchNum,max_batchNum);
@@ -401,21 +493,16 @@ class ANN extends Lab2{
                     update(batch);
                     batch.clear();
                 }
-
                 List<dfvec> sample = raw_inputs.subList(start, end + 1);
                 batch.add(sample);
                 start++;
                 end++;
-
-               /* count++;
-                netPerceptron dashabi = input_layer.get(0);
-                //System.out.println( "input: " + dashabi.netinput + " | " + "output: "+ dashabi.output +  " | " +  "delta: " + dashabi.delta);
-                System.out.println( Arrays.toString(dashabi.weights));*/
-
             }
-
+            // restore the perceptron
+            recoverWeights();
         }
     }
+
     public void update(List<List<dfvec>> samples) {
 
         if(samples == null || samples.size() == 0 ){
@@ -438,7 +525,7 @@ class ANN extends Lab2{
             // calculate and update the errs
             // get the label: teacher vector
             double[] teacher = new double[OUTPUT_LAYER_NUM];
-            teacher[labels.indexOf(sample.get((windowSize + 1)/2).label)] = 1.0;
+            teacher[labels.indexOf(sample.get((windowSize + 1)/2 - 1).label)] = 1.0;
 
             for (int i = 0; i < errs.length; i++) {
                 netPerceptron p = output_layer.get(i);
@@ -457,6 +544,10 @@ class ANN extends Lab2{
         }*/
 
         // backprop delta
+       /* if((conut < 100000)){
+            System.out.println(errs[0] + " " + output_layer.get(0).sigmoidP(output_layer.get(0).output));
+            conut++;
+        }*/
         for (netPerceptron op : output_layer) {
             op.delta = op.sigmoidP(op.output)*errs[output_layer.indexOf(op)];
             // update next layer delta
@@ -465,36 +556,47 @@ class ANN extends Lab2{
                 child.delta += child.ReLUP(child.netinput)*op.weights[i] * op.delta;
                 // update output layer weights
                 op.weights[i] += alpha * op.delta * child.output;
+                // momentum
+                op.weights[i] -= beta * alpha* op.prevdelta * child.prevoutput;
             }
             // bias
             op.weights[op.weights.length - 1] += alpha*op.delta*(-1);
+            op.weights[op.weights.length - 1] -= beta* alpha* op.prevdelta*(-1);
         }
 
         for (netPerceptron hp : hidden_layer) {
-            /*double weightedSum = 0;
-            int index = hidden_layer.indexOf(hp);
-            for (netPerceptron np : output_layer) {
-
-            }*/
-           /* hp.delta = hp.delta*hp.ReLUP(hp.netinput);*/
 
             for (int i = 0; i < hp.weights.length - 1; i ++) {
-                netPerceptron chlid = hp.prevLayer.get(i);
-                chlid.delta += hp.weights[i]*hp.delta;
+                netPerceptron child = hp.prevLayer.get(i);
+                child.delta += hp.weights[i]*hp.delta;
                 // update weights
-                hp.weights[i] += alpha * hp.delta* chlid.output;
+                hp.weights[i] += alpha * hp.delta* child.output;
+                // momentum
+                hp.weights[i] -= beta * alpha * hp.prevdelta * child.prevoutput;
             }
 
             // bias
             hp.weights[hp.weights.length - 1] += alpha*hp.delta*(-1);
+            // momentum
+            hp.weights[hp.weights.length - 1] -= beta* alpha* hp.prevdelta*(-1);
         }
+
         for (netPerceptron ip : input_layer) {
             int index = input_layer.indexOf(ip);
             dfvec input = input_avg.get(index);
             for (int i = 0; i < ip.weights.length; i++) {
                 ip.weights[i] += alpha * ip.delta * input.features[i];
+                // momentum
+                ip.weights[i] -= beta*alpha * ip.prevdelta * input.features[i];
             }
         }
+
+       /* if(conut < 71676){
+
+        netPerceptron p = output_layer.get(0);
+        System.out.println("delta: " + p.delta + " " + Arrays.toString(p.weights) + " " + conut++);
+        System.out.println("-----------------");
+        }*/
 
         clear_input_output_delta();
 
@@ -532,22 +634,56 @@ class ANN extends Lab2{
     public void clear_input_output_delta() {
         // clear input and output and delta for each perceptron
         for (netPerceptron p : input_layer) {
+            p.prevdelta = p.delta;
+            p.prevoutput = p.output;
             p.output = 0;
             p.netinput = 0;
             p.delta = 0;
         }
         for (netPerceptron p : hidden_layer) {
+            p.prevdelta = p.delta;
+            p.prevoutput = p.output;
             p.output = 0;
             p.netinput = 0;
             p.delta = 0;
         }
         for (netPerceptron p : output_layer) {
+            p.prevdelta = p.delta;
+            p.prevoutput = p.output;
             p.output = 0;
             p.netinput = 0;
             p.delta = 0;
         }
     }
 
+
+    public void recoverWeights() {
+        for (netPerceptron key : droppedWeights.keySet()) {
+            Double[][] weights = droppedWeights.get(key);
+            //System.arraycopy(weights[0],0,key.weights,0,weights[0].length);
+            for (int i = 0; i < weights[0].length; i++) {
+               key.weights[i]= weights[0][i];
+            }
+            for (netPerceptron parent : key.nextLayer) {
+               parent.weights[parent.prevLayer.indexOf(key)] =  weights[1][key.nextLayer.indexOf(parent)];
+            }
+        }
+        droppedWeights.clear();
+    }
+
+
+    public void scale(double factor) {
+            for (netPerceptron ip : input_layer) {
+                for (int i = 0; i < ip.weights.length; i++) {
+                    ip.weights[i] *= factor ;
+                }
+            }
+            for (netPerceptron hp : hidden_layer) {
+                for (int i = 0; i < hp.weights.length; i++) {
+                    hp.weights[i] *= factor ;
+                }
+            }
+    }
 }
 class Strian {
     static int ID = 1;
@@ -650,6 +786,7 @@ class data {
 
 class netPerceptron extends Lab2{
     static double alpha = 0.01;
+    static double beta = 0.1;
     double [] weights;
     List<netPerceptron> nextLayer;
     List<netPerceptron> prevLayer;
@@ -657,6 +794,8 @@ class netPerceptron extends Lab2{
     double netinput;
     double output;
     double delta;
+    double prevdelta;
+    double prevoutput;
     // layerNum 1: raw_input layer's perceptron constructor: without prevLayer
     public netPerceptron(int layerNum, List<netPerceptron> nextLayer, int input_Num) {
         this.layerNum = layerNum;
@@ -749,11 +888,6 @@ class netPerceptron extends Lab2{
         // return sum;
     }
 
-    public void updateweights (double[] input, double[] delta){
-
-        //TODO
-
-    }
     public double sigmoid (double x){
         return 1/(1 + (Math.exp(-x)));
     }
